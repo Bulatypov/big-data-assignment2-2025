@@ -7,6 +7,8 @@ spark = SparkSession.builder \
     .appName('data preparation') \
     .master("local") \
     .config("spark.sql.parquet.enableVectorizedReader", "true") \
+    .config("spark.executor.memory", "4g") \
+    .config("spark.driver.memory", "4g") \
     .getOrCreate()
 
 
@@ -24,4 +26,4 @@ def create_doc(row):
 df.foreach(create_doc)
 
 
-# df.write.csv("/index/data", sep = "\t")
+df.write.csv("/index/data", sep = "\t")

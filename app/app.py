@@ -1,14 +1,14 @@
 from cassandra.cluster import Cluster
+print("App entry")
 
-
-print("hello app")
-
-# Connects to the cassandra server
+# Connecting to the cassandra server
 cluster = Cluster(['cassandra-server'])
 
+# Creating session
 session = cluster.connect()
 
-# displays the available keyspaces
-rows = session.execute('DESC keyspaces')
-for row in rows:
-    print(row)
+# Show keyspaces
+table = session.execute('DESC keyspaces')
+
+for line in table:
+    print(line)

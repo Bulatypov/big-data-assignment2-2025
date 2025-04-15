@@ -5,3 +5,4 @@ fastparquet
 pathvalidate
 pyspark
 tqdm
+cqlsh

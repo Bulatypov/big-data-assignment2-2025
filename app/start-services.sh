@@ -1,43 +1,62 @@
 #!/bin/bash
-# This will run only by the master node
+set -euo pipefail
 
-# starting HDFS daemons
-$HADOOP_HOME/sbin/start-dfs.sh
+# Configuration
+HADOOP_DFS_SCRIPT="$HADOOP_HOME/sbin/start-dfs.sh"
+HADOOP_YARN_SCRIPT="$HADOOP_HOME/sbin/start-yarn.sh"
+SPARK_JARS_SOURCE="/usr/local/spark/jars/*"
+SPARK_JARS_HDFS="/apps/spark/jars"
+HDFS_USER_DIR="/user/root"
 
-# starting Yarn daemons
-$HADOOP_HOME/sbin/start-yarn.sh
-# yarn --daemon start resourcemanager
+# Function to start Hadoop services
+start_hadoop_services() {
+    echo "Starting HDFS daemons..."
+    "$HADOOP_DFS_SCRIPT"
 
-# Start mapreduce history server
-mapred --daemon start historyserver
+    echo "Starting YARN daemons..."
+    "$HADOOP_YARN_SCRIPT"
 
+    echo "Starting MapReduce History Server..."
+    mapred --daemon start historyserver
+}
 
-# track process IDs of services
-jps -lm
+# Function to verify and configure HDFS
+configure_hdfs() {
+    echo "Checking HDFS status..."
+    hdfs dfsadmin -report
 
-# subtool to perform administrator functions on HDFS
-# outputs a brief report on the overall HDFS filesystem
-hdfs dfsadmin -report
+    echo "Ensuring Namenode is out of safemode..."
+    hdfs dfsadmin -safemode leave
 
-# If namenode in safemode then leave it
-hdfs dfsadmin -safemode leave
+    echo "Creating Spark jars directory in HDFS..."
+    hdfs dfs -mkdir -p "$SPARK_JARS_HDFS"
+    hdfs dfs -chmod 744 "$SPARK_JARS_HDFS"
 
-# create a directory for spark apps in HDFS
-hdfs dfs -mkdir -p /apps/spark/jars
-hdfs dfs -chmod 744 /apps/spark/jars
+    echo "Copying Spark jars to HDFS..."
+    hdfs dfs -put "$SPARK_JARS_SOURCE" "$SPARK_JARS_HDFS/"
+    hdfs dfs -chmod +rx "$SPARK_JARS_HDFS/"
 
+    echo "Creating user directory in HDFS..."
+    hdfs dfs -mkdir -p "$HDFS_USER_DIR"
+}
 
-# Copy all jars to HDFS
-hdfs dfs -put /usr/local/spark/jars/* /apps/spark/jars/
-hdfs dfs -chmod +rx /apps/spark/jars/
+# Function to display service status
+show_service_status() {
+    echo "Current running services:"
+    jps -lm
 
+    echo "Scala version (Spark):"
+    scala -version
+}
 
-# print version of Scala of Spark
-scala -version
+main() {
+    echo "Master node initialization started"
 
-# track process IDs of services
-jps -lm
+    start_hadoop_services
+    configure_hdfs
+    show_service_status
 
-# Create a directory for root user on HDFS
-hdfs dfs -mkdir -p /user/root
+    echo "Master node setup completed successfully"
+}
 
+main "$@"
